@@ -70,8 +70,7 @@ def test(j, e1, e2, c):
 def lookS(j, i):
   return util.S[j][(16 * (2 * (i // 32) + i % 2)) + (i // 2) % 16]
 
-myhashmap = {}
-boomer = 0
+counter = [ [0]*64 for _ in range(9) ]
 
 with open(sys.argv[1]) as f:
   cn = 0
@@ -116,27 +115,21 @@ with open(sys.argv[1]) as f:
       co2.append(bitListToInt(getblock(j, e1, 6)))
       c.append(bitListToInt(getblock(j, cPrime, 4)))
 
-    l = [[], [], [], [], []]
     for k in range(64):
       if lookS(2, co1[0] ^ k) ^ lookS(2, co2[0] ^ k) == c[0]:
-        l[0].append(k)
+        counter[2][k] += 1
       if lookS(5, co1[1] ^ k) ^ lookS(5, co2[1] ^ k) == c[1]:
-        l[1].append(k)
+        counter[5][k] += 1
       if lookS(6, co1[2] ^ k) ^ lookS(6, co2[2] ^ k) == c[2]:
-        l[2].append(k)
+        counter[6][k] += 1
       if lookS(7, co1[3] ^ k) ^ lookS(7, co2[3] ^ k) == c[3]:
-        l[3].append(k)
+        counter[7][k] += 1
       if lookS(8, co1[4] ^ k) ^ lookS(8, co2[4] ^ k) == c[4]:
-        l[4].append(k)
+        counter[8][k] += 1
 
-    for elem in itertools.product(*l):
-      bb = tupleToBigInt(elem)
-      myhashmap.setdefault(bb, 0)
-      myhashmap[bb] += 1
+def getmaxindex(lis):
+  m = max(lis)
+  return [i for i, j in enumerate(lis) if j==m]
 
-cnt = 0
-for (k, v) in sorted(myhashmap.items(), key=operator.itemgetter(0)):
-  cnt = cnt + 1
-  print(k, v)
-  if cnt > 10:
-    break
+for j in [2, 5, 6, 7, 8]:
+  print(j, getmaxindex(counter[j]))
