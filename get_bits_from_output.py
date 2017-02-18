@@ -67,6 +67,9 @@ def test(j, e1, e2, c):
   r2 = list(map(lambda k: k ^ bitListToInt(e1), IN(j, r1, c)))
   return r2
 
+def lookS(j, i):
+  return util.S[j][(16 * (2 * (i // 32) + i % 2)) + (i // 2) % 16]
+
 myhashmap = {}
 boomer = 0
 
@@ -115,15 +118,15 @@ with open(sys.argv[1]) as f:
 
     l = [[], [], [], [], []]
     for k in range(64):
-      if util.S[2][co1[0] ^ k] ^ util.S[2][co2[0] ^ k] == c[0]:
+      if lookS(2, co1[0] ^ k) ^ lookS(2, co2[0] ^ k) == c[0]:
         l[0].append(k)
-      if util.S[5][co1[1] ^ k] ^ util.S[5][co2[1] ^ k] == c[1]:
+      if lookS(5, co1[1] ^ k) ^ lookS(5, co2[1] ^ k) == c[1]:
         l[1].append(k)
-      if util.S[6][co1[2] ^ k] ^ util.S[6][co2[2] ^ k] == c[2]:
+      if lookS(6, co1[2] ^ k) ^ lookS(6, co2[2] ^ k) == c[2]:
         l[2].append(k)
-      if util.S[7][co1[3] ^ k] ^ util.S[7][co2[3] ^ k] == c[3]:
+      if lookS(7, co1[3] ^ k) ^ lookS(7, co2[3] ^ k) == c[3]:
         l[3].append(k)
-      if util.S[8][co1[4] ^ k] ^ util.S[8][co2[4] ^ k] == c[4]:
+      if lookS(8, co1[4] ^ k) ^ lookS(8, co2[4] ^ k) == c[4]:
         l[4].append(k)
 
     for elem in itertools.product(*l):
