@@ -105,29 +105,33 @@ with open(sys.argv[1]) as f:
     e0 = util.expand(lf0)
     e1 = util.expand(lf1)
 
-    doomed = False
-    boom = []
+    co1 = [] # Inputs that go into S box for 1st plaintext
+    co2 = [] # Inputs that go into S box for 2nd plaintext
+    c = []
     for j in [2, 5, 6, 7, 8]:
-      res = test(j, getblock(j, e0, 6), getblock(j, e1, 6), getblock(j, cPrime, 4))
-      if res == []:
-        doomed = True
-        break
-      boom.append(res)
+      co1.append(bitListToInt(getblock(j, e0, 6)))
+      co2.append(bitListToInt(getblock(j, e1, 6)))
+      c.append(bitListToInt(getblock(j, cPrime, 4)))
 
-    if doomed:
-      continue
-    boomer += 1
+    l = [[], [], [], [], []]
+    for k in range(64):
+      if util.S[2][co1[0] ^ k] ^ util.S[2][co2[0] ^ k] == c[0]:
+        l[0].append(k)
+      if util.S[5][co1[1] ^ k] ^ util.S[5][co2[1] ^ k] == c[1]:
+        l[1].append(k)
+      if util.S[6][co1[2] ^ k] ^ util.S[6][co2[2] ^ k] == c[2]:
+        l[2].append(k)
+      if util.S[7][co1[3] ^ k] ^ util.S[7][co2[3] ^ k] == c[3]:
+        l[3].append(k)
+      if util.S[8][co1[4] ^ k] ^ util.S[8][co2[4] ^ k] == c[4]:
+        l[4].append(k)
 
-    # By now boom has 5 6-bit integers ki list
-    # And kk will have their cartesian product
-    kk = itertools.product(*boom)
-    for k in kk:
-      bb = tupleToBigInt(k)
+    for elem in itertools.product(*l):
+      bb = tupleToBigInt(elem)
       myhashmap.setdefault(bb, 0)
       myhashmap[bb] += 1
 
 cnt = 0
-print(boomer)
 for (k, v) in sorted(myhashmap.items(), key=operator.itemgetter(0)):
   cnt = cnt + 1
   print(k, v)
