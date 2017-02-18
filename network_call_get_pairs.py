@@ -12,7 +12,7 @@ r.packages.urllib3.disable_warnings()
 url = 'https://172.27.26.123:9999/des'
 defbody = {'teamname': 'Gupt_Nashak', 'password': '3e5c2290d2dc86fe25d24eb6eb17fcf7'}
 
-pool = multiprocessing.dummy.Pool(processes=100)
+pool = multiprocessing.dummy.Pool(processes=10)
 
 def getcipher(text):
   defbody['plaintext'] = text

@@ -11,7 +11,7 @@ trantab = str.maketrans(intab, outtab)
 permuxor = util.applyPermutation(util.ipinv, util.xor)
 
 # Required pairs
-req = 1000000
+req = 1000
 
 def convert(hexlist):
   """Print the list of 8 bytes as a string for input"""
