@@ -8,10 +8,6 @@ intab = "fghijklmnopqrstu"
 outtab = "0123456789abcdef"
 trantab = str.maketrans(intab, outtab)
 
-if len(sys.argv) < 2:
-  print('Wanted input file as argument')
-  exit(0)
-
 def getbytestrings(inbytes):
   """Convert a hex string of 64 bits into a bit string of length 64"""
   return ("{0:020b}".format(int(inbytes, 16))).zfill(64)
@@ -70,66 +66,70 @@ def test(j, e1, e2, c):
 def lookS(j, i):
   return util.S[j][(16 * (2 * (i // 32) + i % 2)) + (i // 2) % 16]
 
-counter = [ [0]*64 for _ in range(9) ]
+if __name__ == '__main__':
+  if len(sys.argv) < 2:
+    print('Wanted input file as argument')
+    exit(0)
 
-with open(sys.argv[1]) as f:
-  cn = 0
-  for line in f:
-    # if cn > 0:
-      # break
-    # cn = cn + 1
+  counter = [ [0]*64 for _ in range(9) ]
 
-    line = line.rstrip().split(' ')
-    line[0] = line[0].translate(trantab).replace(':', '')
-    line[1] = line[1].translate(trantab).replace(':', '')
+  with open(sys.argv[1]) as f:
+    cn = 0
+    for line in f:
+      # if cn > 0:
+        # break
+      # cn = cn + 1
 
-    in0, in1 = splitInHalf(line[0])
-    out0, out1 = splitInHalf(line[1])
+      line = line.rstrip().split(' ')
+      line[0] = line[0].translate(trantab).replace(':', '')
+      line[1] = line[1].translate(trantab).replace(':', '')
 
-    pout0 = ''.join(util.applyBitPermutation(util.rfpinv, list(getbytestrings(out0))))
-    pout1 = ''.join(util.applyBitPermutation(util.rfpinv, list(getbytestrings(out1))))
+      in0, in1 = splitInHalf(line[0])
+      out0, out1 = splitInHalf(line[1])
 
-    def helper(k):
-      a, b = k
-      return toBitList(a), toBitList(b)
+      pout0 = ''.join(util.applyBitPermutation(util.rfpinv, list(getbytestrings(out0))))
+      pout1 = ''.join(util.applyBitPermutation(util.rfpinv, list(getbytestrings(out1))))
 
-    # All 4 are bit lists
-    lf0, rf0 = helper(splitInHalf(pout0))
-    lf1, rf1 = helper(splitInHalf(pout1))
+      def helper(k):
+        a, b = k
+        return toBitList(a), toBitList(b)
 
-    # Is a bit list
-    cons = toBitList(''.join(map(util.byteToBitString, util.xor))[32:])
+      # All 4 are bit lists
+      lf0, rf0 = helper(splitInHalf(pout0))
+      lf1, rf1 = helper(splitInHalf(pout1))
 
-    # Are bit lists
-    rPrime = util.xorBitList(rf0, rf1)
-    cPrime = util.applyBitPermutation(util.pinv, util.xorBitList(rPrime, cons))
+      # Is a bit list
+      cons = toBitList(''.join(map(util.byteToBitString, util.xor))[32:])
 
-    e0 = util.expand(lf0)
-    e1 = util.expand(lf1)
+      # Are bit lists
+      rPrime = util.xorBitList(rf0, rf1)
+      cPrime = util.applyBitPermutation(util.pinv, util.xorBitList(rPrime, cons))
 
-    co1 = [] # Inputs that go into S box for 1st plaintext
-    co2 = [] # Inputs that go into S box for 2nd plaintext
-    c = []
-    for j in [2, 5, 6, 7, 8]:
-      co1.append(bitListToInt(getblock(j, e0, 6)))
-      co2.append(bitListToInt(getblock(j, e1, 6)))
-      c.append(bitListToInt(getblock(j, cPrime, 4)))
+      e0 = util.expand(lf0)
+      e1 = util.expand(lf1)
 
-    for k in range(64):
-      if lookS(2, co1[0] ^ k) ^ lookS(2, co2[0] ^ k) == c[0]:
-        counter[2][k] += 1
-      if lookS(5, co1[1] ^ k) ^ lookS(5, co2[1] ^ k) == c[1]:
-        counter[5][k] += 1
-      if lookS(6, co1[2] ^ k) ^ lookS(6, co2[2] ^ k) == c[2]:
-        counter[6][k] += 1
-      if lookS(7, co1[3] ^ k) ^ lookS(7, co2[3] ^ k) == c[3]:
-        counter[7][k] += 1
-      if lookS(8, co1[4] ^ k) ^ lookS(8, co2[4] ^ k) == c[4]:
-        counter[8][k] += 1
+      co1 = [] # Inputs that go into S box for 1st plaintext
+      co2 = [] # Inputs that go into S box for 2nd plaintext
+      c = []
+      for j in util.sBoxesForThisXor:
+        co1.append(bitListToInt(getblock(j, e0, 6)))
+        co2.append(bitListToInt(getblock(j, e1, 6)))
+        c.append(bitListToInt(getblock(j, cPrime, 4)))
 
-def getmaxindex(lis):
-  m = max(lis)
-  return [i for i, j in enumerate(lis) if j==m]
+      # First guess a 6 bit value
+      for k in range(64):
+        # Try that for each S box relevant for this XOR value
+        for i in range(len(util.sBoxesForThisXor)):
+          # If the input and output match
+          if (lookS(util.sBoxesForThisXor[i], co1[i] ^ k) ^
+              lookS(util.sBoxesForThisXor[i], co2[i] ^ k)) == c[i]:
+            # Increment the counter for this guessed value
+            counter[util.sBoxesForThisXor[i]][k] += 1
 
-for j in [2, 5, 6, 7, 8]:
-  print(j, getmaxindex(counter[j]))
+  def getmaxindex(lis):
+    m = max(lis)
+    return [i for i, j in enumerate(lis) if j==m]
+
+  for j in util.sBoxesForThisXor:
+    # The value with the max occurance wins
+    print(j, getmaxindex(counter[j]))
