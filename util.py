@@ -22,6 +22,16 @@ ipinv = [
     33, 1, 41, 9, 49, 17, 57, 25
     ]
 
+def applyBitPermutation(permu, array):
+  """Apply given permutation to bit array"""
+
+  # Final result will be stored in this
+  permubitxor = array[:]
+  for i, c in enumerate(permubitxor):
+    permubitxor[i] = array[permu[i]-1]
+
+  return permubitxor
+
 def applyPermutation(permu, array):
   """Apply given permutation to array"""
 
