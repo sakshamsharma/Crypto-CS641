@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #define BYTE unsigned char
 #define INT unsigned int
 INT S[8][64] = {
@@ -49,9 +50,9 @@ INT PC1[] = {57, 49, 41, 33, 25, 17, 9,  1,  58, 50, 42, 34, 26, 18,
              14, 6,  61, 53, 45, 37, 29, 21, 13, 5,  28, 20, 12, 4};
 
 /* Shedule og the left shifts for C and D blocks
-unsigned short shifts[] = {
-        2, 13, 13 };
-*/
+   unsigned short shifts[] = {
+   2, 13, 13 };
+   */
 unsigned short shifts[] = {1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1};
 
 /* PERMUTED CHOICE 2 (PC@) */
@@ -141,8 +142,8 @@ BYTE *binary;
 }
 
 /****************************************************************
-               DES
-****************************************************************/
+  DES
+ ****************************************************************/
 /* INITIAL PERMUTATION (IP) */
 
 INT IP[] = {58, 50, 42, 34, 26, 18, 10, 2, 60, 52, 44, 36, 28, 20, 12, 4,
@@ -187,8 +188,8 @@ char flag;
     static BYTE LR[64], f[32], preS[48];
 
     /*
-      in[9] ='\0';
-    */
+       in[9] ='\0';
+       */
 
     /* Unpack the INPUT block */
 
@@ -196,8 +197,8 @@ char flag;
 
     /* Permute unpacked input block with IP to generate L and R */
     /*
-      printf("\nThe block after the initial permutation IP \n");
-    */
+       printf("\nThe block after the initial permutation IP \n");
+       */
     for (j = 0; j < 64; j++) {
         LR[j] = block[IP[j] - 1];
         /*printf("%d", LR[j]);*/
@@ -205,19 +206,19 @@ char flag;
 
     /* Perform r rounds */
     /*
-    printf(" In des 3rd round expandes block is \n");
-    */
+       printf(" In des 3rd round expandes block is \n");
+       */
 
     for (i = 0; i < r; i++) { /**--*/
         /* expand R to 48 bits with E and XOR  with ith subkey */
         for (j = 0; j < 48; j++) {
             preS[j] = LR[E[j] + 31] ^ KS[i][j];
             /*
-              if( i==2)
-              {
-              printf("%d", LR[E[j]+31]);
-              }
-            */
+               if( i==2)
+               {
+               printf("%d", LR[E[j]+31]);
+               }
+               */
         }
 
         /* Map 8 6-bit blocks into 8 4-bit bolcks using S-boxes */
@@ -255,10 +256,10 @@ char flag;
         }
     }
     /*
-  printf( "\n\n I am in Des , block before final RFP permute\n");
-  for(i=0; i<64; i++)
-  printf( "%d", LR[i]);
-    */
+       printf( "\n\n I am in Des , block before final RFP permute\n");
+       for(i=0; i<64; i++)
+       printf( "%d", LR[i]);
+       */
     /* Permute L and R with reverse IP-1 to generate output block*/
     for (j = 0; j < 64; j++)
         block[j] = LR[RFP[j] - 1];
@@ -267,8 +268,54 @@ char flag;
 
     pack8(out, block);
     /*
-  out[9] = '\0';
-    */
+       out[9] = '\0';
+       */
 }
 
-int main() {}
+int main() {
+    FILE *fp;
+    char *line = NULL;
+    size_t len = 0;
+    ssize_t read;
+
+    fp = fopen("keyoptions", "r");
+    if (fp == NULL)
+        return 1;
+
+    BYTE k[56];
+    BYTE input[9] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, '\0'};
+
+    BYTE expectedOutput[9] = {0x03, 0xfb, 0xd6, 0x77, 0xb3,
+                              0xee, 0x68, 0x52, '\0'};
+    // 03fbd677b3ee6852
+
+    BYTE outs[8];
+
+    while ((read = getline(&line, &len, fp)) != -1) {
+        int i, missed = 0;
+        for (i = 0; i < 56; i++) {
+            k[i] = line[i] - '0';
+        }
+
+        set_the_key(0, k, 6);
+        des(input, outs, 6, 'N');
+        int isSame = 1;
+        for (i = 0; i < 8; i++) {
+            if (outs[i] != expectedOutput[i]) {
+                isSame = 0;
+                missed++;
+            }
+        }
+        if (isSame) {
+            printf("%s", line);
+        } else {
+            if (missed < 3)
+                printf("Missed: %d\n", missed);
+        }
+    }
+
+    fclose(fp);
+    if (line)
+        free(line);
+    return 0;
+}

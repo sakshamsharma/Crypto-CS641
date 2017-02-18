@@ -11,8 +11,9 @@ for replacement in itertools.product(*boom):
   for i in range(14):
     kk[replaceLocations[i]] = replacement[i]
   bitstring = ''.join(map(lambda x: str(x), kk))
-  bitlist = toBitList(bitstring)
-  intlist = list(map(lambda x: bitListToInt(getblock(x, bitlist, 8)), range(1, 8)))
-  for i in intlist:
-    print(i, end=' ')
-  print()
+  print(bitstring)
+  # bitlist = toBitList(bitstring)
+  # intlist = list(map(lambda x: bitListToInt(getblock(x, bitlist, 8)), range(1, 8)))
+  # for i in intlist:
+    # print(i, end=' ')
+  # print()
