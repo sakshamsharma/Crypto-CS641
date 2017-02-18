@@ -144,6 +144,10 @@ def applyBitPermutation(permu, array):
   return permubitxor
 
 def xorBitList(bl, xor):
+  if bl[0] != 0 and bl[0] != 1:
+    print('ALARM')
+    exit(0)
+
   k = []
   for (a, b) in zip(bl, xor):
     k.append(a ^ b)

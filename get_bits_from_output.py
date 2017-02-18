@@ -13,19 +13,38 @@ if len(sys.argv) < 2:
   exit(0)
 
 def getbytestrings(inbytes):
+  """Convert a hex string of 64 bits into a bit string of length 64"""
   return ("{0:020b}".format(int(inbytes, 16))).zfill(64)
 
 def splitInHalf(st):
+  """Split a bit string into 2 strings of half length"""
   return st[:len(st)//2], st[len(st)//2:]
 
 def toBitList(st):
+  """Convert bit string to bit list of integers"""
   return list(map(lambda x: ord(x)-ord('0'), st))
 
 def bitListToInt(bl):
+  """Convert bit list to the represented integer"""
+  if bl[0] != 0 and bl[0] != 1:
+    print('ALARM')
+    exit(0)
   out = 0
   for bit in bl:
     out = (out << 1) | bit
   return out
+
+def tupleToBigInt(tup):
+  """Convert a tuple to an int"""
+  kk = 0
+  for t in tup:
+    kk = kk << 6
+    kk += t
+  return kk
+
+def getblock(j, bt, k):
+  """Get the jth chunk of k bits"""
+  return bt[k*j-k:k*j]
 
 # Bj and Cj are bit lists
 def IN(j, bj, cj):
@@ -48,17 +67,16 @@ def test(j, e1, e2, c):
   r2 = list(map(lambda k: k ^ bitListToInt(e1), IN(j, r1, c)))
   return r2
 
-def tupleToBigInt(tup):
-  kk = 0
-  for t in tup:
-    kk = kk << 6
-    kk += t
-  return kk
-
 myhashmap = {}
+boomer = 0
 
 with open(sys.argv[1]) as f:
+  cn = 0
   for line in f:
+    # if cn > 0:
+      # break
+    # cn = cn + 1
+
     line = line.rstrip().split(' ')
     line[0] = line[0].translate(trantab).replace(':', '')
     line[1] = line[1].translate(trantab).replace(':', '')
@@ -78,7 +96,7 @@ with open(sys.argv[1]) as f:
     lf1, rf1 = helper(splitInHalf(pout1))
 
     # Is a bit list
-    cons = toBitList(''.join(map(util.byteToBitString, util.xor))[:32])
+    cons = toBitList(''.join(map(util.byteToBitString, util.xor))[32:])
 
     # Are bit lists
     rPrime = util.xorBitList(rf0, rf1)
@@ -86,9 +104,6 @@ with open(sys.argv[1]) as f:
 
     e0 = util.expand(lf0)
     e1 = util.expand(lf1)
-
-    def getblock(j, bt, k):
-      return bt[k*j-k:k*j]
 
     doomed = False
     boom = []
@@ -101,6 +116,7 @@ with open(sys.argv[1]) as f:
 
     if doomed:
       continue
+    boomer += 1
 
     # By now boom has 5 6-bit integers ki list
     # And kk will have their cartesian product
@@ -111,6 +127,7 @@ with open(sys.argv[1]) as f:
       myhashmap[bb] += 1
 
 cnt = 0
+print(boomer)
 for (k, v) in sorted(myhashmap.items(), key=operator.itemgetter(0)):
   cnt = cnt + 1
   print(k, v)
