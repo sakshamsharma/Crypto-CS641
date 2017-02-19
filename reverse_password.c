@@ -67,68 +67,33 @@ INT PC2[] = {14, 17, 11, 24, 1,  5,  3,  28, 15, 6,  21, 10,
 
 BYTE KS[16][48];
 
-void set_the_key(sw1, pkey, r)
-    INT sw1; /* type of cryption 0= encryption, 1= decryption */
+/* PKEY is CD here, when we are concerned with reversing
+ * One way to avoid this is to give key inverted, but this is easier.
+ */
+void set_the_key(sw1, pkey, r) INT sw1;
 BYTE *pkey;
 INT r;
 {
     register INT i, j, k, t1, t2;
-    static BYTE key[64];
-    static BYTE CD[56];
 
-    /* Unpack KEY from 8 bits/byte into 1 bit/byte */
-    unpack8(pkey, key);
-    /* printf(" key in 56 bits....\n"); */
-    /* permute unpacked key with PC1 to generate C and D*/
-    for (i = 0; i < 56; i++) {
-        CD[i] = key[PC1[i] - 1];
-        /* printf("%d", CD[i]); */
-    }
-
-    /* Rotate and permute C and D to generate 16 subkeys */
     for (i = 0; i < r; i++) { /**--*/
         /* Rotate C and D */
         for (j = 0; j < shifts[i]; j++) {
-            t1 = CD[0];
-            t2 = CD[28];
+            t1 = pkey[0];
+            t2 = pkey[28];
             for (k = 0; k < 27; k++) {
-                CD[k] = CD[k + 1];
-                CD[k + 28] = CD[k + 29];
+                pkey[k] = pkey[k + 1];
+                pkey[k + 28] = pkey[k + 29];
             }
-            CD[27] = t1;
-            CD[55] = t2;
+            pkey[27] = t1;
+            pkey[55] = t2;
         }
-        /* Set the order of subkeys for type of encryption */
         j = sw1 ? r - 1 - i : i; /**--*/
 
-        /* Permute C and D with PC2 to generate KS[i] */
         for (k = 0; k < 48; k++)
-            KS[j][k] = CD[PC2[k] - 1];
+            KS[j][k] = pkey[PC2[k] - 1];
     }
 
-    return;
-}
-
-void key_as_bits(sw1, CD, r) INT sw1;
-BYTE *CD;
-INT r;
-{
-    register INT i, j, k, t1, t2;
-    for (i = 0; i < r; i++) {
-        for (j = 0; j < shifts[i]; j++) {
-            t1 = CD[0];
-            t2 = CD[28];
-            for (k = 0; k < 27; k++) {
-                CD[k] = CD[k + 1];
-                CD[k + 28] = CD[k + 29];
-            }
-            CD[27] = t1;
-            CD[55] = t2;
-        }
-        j = sw1 ? r - 1 - i : i;
-        for (k = 0; k < 48; k++)
-            KS[j][k] = CD[PC2[k] - 1];
-    }
     return;
 }
 
@@ -214,6 +179,9 @@ INT INV_P[] = {
     8, 14, 25, 3,  4,  29, 11, 19, 32, 12, 22, 7, 5,  27, 15, 21,
 };
 
+/* Some changes
+ * The L and R side are inverted while reversing
+ */
 void des(in, out, r, flag) BYTE *in; /* packed 64 bit Input block */
 BYTE *out;                           /* packed 64 bit output block */
 INT r;                               /* number of rounds */
@@ -225,12 +193,11 @@ char flag;
     unpack8(in, block);
     for (j = 0; j < 64; j++) {
         LR[j] = block[INV_RFP[j] - 1];
-        /*printf("%d", LR[j]);*/
     }
 
     for (i = 0; i < r; i++) { /**--*/
         for (j = 0; j < 48; j++) {
-            preS[j] = LR[E[j] + 31] ^ KS[i][j];
+            preS[j] = LR[E[j] - 1] ^ KS[i][j];
         }
 
         for (j = 0; j < 8; j++) {
@@ -252,13 +219,12 @@ char flag;
         }
 
         for (j = 0; j < 32; j++) {
-            /* Copy R */
-            t = LR[j + 32];
+            t = LR[j];
             if (flag == 'N')
-                LR[j + 32] = LR[j] ^ f[P[j] - 1];
+                LR[j] = LR[j + 32] ^ f[P[j] - 1];
             else
-                LR[j + 32] = LR[j] ^ f[INV_P[j] - 1];
-            LR[j] = t;
+                LR[j] = LR[j + 32] ^ f[INV_P[j] - 1];
+            LR[j + 32] = t;
         }
     }
     for (j = 0; j < 64; j++)
@@ -283,7 +249,6 @@ void tostr(BYTE out[]) {
 }
 
 int main(int argc, char **argv) {
-    FILE *fp;
     /*char line[65] =*/
     /*"00101110001101100110111110100011001100110101111001101110";*/
     BYTE key[56] = {0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 1,
@@ -298,7 +263,7 @@ int main(int argc, char **argv) {
     BYTE outs[100];
     tobyte(string, input);
 
-    key_as_bits(0, key, 6);
+    set_the_key(1, key, 6);
 
     des(input, outs, 6, 'N');
     int i;
