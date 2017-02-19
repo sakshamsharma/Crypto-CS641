@@ -2,3 +2,4 @@
 !*.py
 !.gitignore
 !*.c
+!*.txt
