@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #define BYTE unsigned char
 #define INT unsigned int
 INT S[8][64] = {
@@ -108,6 +109,29 @@ INT r;
     return;
 }
 
+void key_as_bits(sw1, CD, r) INT sw1;
+BYTE *CD;
+INT r;
+{
+    register INT i, j, k, t1, t2;
+    for (i = 0; i < r; i++) {
+        for (j = 0; j < shifts[i]; j++) {
+            t1 = CD[0];
+            t2 = CD[28];
+            for (k = 0; k < 27; k++) {
+                CD[k] = CD[k + 1];
+                CD[k + 28] = CD[k + 29];
+            }
+            CD[27] = t1;
+            CD[55] = t2;
+        }
+        j = sw1 ? r - 1 - i : i;
+        for (k = 0; k < 48; k++)
+            KS[j][k] = CD[PC2[k] - 1];
+    }
+    return;
+}
+
 /********************************************************************
  *UNPACK8()  Unpack 8 bytes at 8bits/byte into 64 bytes at 1 bit/byte
  ********************************************************************/
@@ -186,45 +210,18 @@ char flag;
     register INT i, j, k, t;
     static BYTE block[64]; /* unpacked 64-bit input/output block */
     static BYTE LR[64], f[32], preS[48];
-
-    /*
-       in[9] ='\0';
-       */
-
-    /* Unpack the INPUT block */
-
     unpack8(in, block);
-
-    /* Permute unpacked input block with IP to generate L and R */
-    /*
-       printf("\nThe block after the initial permutation IP \n");
-       */
     for (j = 0; j < 64; j++) {
         LR[j] = block[IP[j] - 1];
         /*printf("%d", LR[j]);*/
     }
 
-    /* Perform r rounds */
-    /*
-       printf(" In des 3rd round expandes block is \n");
-       */
-
     for (i = 0; i < r; i++) { /**--*/
-        /* expand R to 48 bits with E and XOR  with ith subkey */
         for (j = 0; j < 48; j++) {
             preS[j] = LR[E[j] + 31] ^ KS[i][j];
-            /*
-               if( i==2)
-               {
-               printf("%d", LR[E[j]+31]);
-               }
-               */
         }
 
-        /* Map 8 6-bit blocks into 8 4-bit bolcks using S-boxes */
         for (j = 0; j < 8; j++) {
-            /* Compute index t into jth s box */
-
             k = 6 * j;
             t = preS[k];
             t = (t << 1) | preS[k + 5];
@@ -245,77 +242,69 @@ char flag;
         for (j = 0; j < 32; j++) {
             /* Copy R */
             t = LR[j + 32];
-            /* Permute Permute f w/ P and XOR w/ L to generate new R*/
             if (flag == 'N')
                 LR[j + 32] = LR[j] ^ f[P[j] - 1];
             else
                 LR[j + 32] = LR[j] ^ f[INV_P[j] - 1];
-            /*LR[j+32] = LR[j]^f[j];*/
-            /* copy original R to new L */
             LR[j] = t;
         }
     }
-    /*
-       printf( "\n\n I am in Des , block before final RFP permute\n");
-       for(i=0; i<64; i++)
-       printf( "%d", LR[i]);
-       */
-    /* Permute L and R with reverse IP-1 to generate output block*/
     for (j = 0; j < 64; j++)
         block[j] = LR[RFP[j] - 1];
-
-    /* Pack data into 8 bits per byte */
-
     pack8(out, block);
-    /*
-       out[9] = '\0';
-       */
 }
 
-int main() {
-    FILE *fp;
-    char *line = NULL;
-    size_t len = 0;
-    ssize_t read;
+void tobyte(char in[], BYTE inp[]) {
+    int i;
+    for (i = 0; 2 * i < strlen(in); ++i) {
+        inp[i] = ((int)(in[2 * i] - 'f')) * 16 + (in[2 * i + 1] - 'f');
+    }
+}
 
-    fp = fopen("keyoptions", "r");
+void tostr(BYTE out[]) {
+    int off, i;
+    for (i = 0; i < 8; ++i) {
+        off = out[i];
+        printf("%c%c", (char)('f' + (off / 16)), (char)('f' + (off % 16)));
+    }
+    printf("\n");
+}
+
+int main(int argc, char **argv) {
+    FILE *fp;
+    char line[100];
+
+    if (argc < 2) {
+        printf("Expected file name containing list of keys\n");
+        return 1;
+    }
+
+    fp = fopen(argv[1], "r");
     if (fp == NULL)
         return 1;
 
-    BYTE k[56];
-    BYTE input[9] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, '\0'};
+    BYTE string[100];
+    printf("Enter input to be encrypted: ");
+    scanf("%s", string);
 
-    BYTE expectedOutput[9] = {0x03, 0xfb, 0xd6, 0x77, 0xb3,
-                              0xee, 0x68, 0x52, '\0'};
-    // 03fbd677b3ee6852
+    while (fgets(line, sizeof line, fp)) {
+        BYTE input[100];
+        BYTE outs[100];
+        tobyte(string, input);
 
-    BYTE outs[8];
-
-    while ((read = getline(&line, &len, fp)) != -1) {
-        int i, missed = 0;
+        int i;
+        BYTE k[56];
         for (i = 0; i < 56; i++) {
             k[i] = line[i] - '0';
         }
+        key_as_bits(0, k, 6);
 
-        set_the_key(0, k, 6);
         des(input, outs, 6, 'N');
-        int isSame = 1;
-        for (i = 0; i < 8; i++) {
-            if (outs[i] != expectedOutput[i]) {
-                isSame = 0;
-                missed++;
-            }
-        }
-        if (isSame) {
-            printf("%s", line);
-        } else {
-            if (missed < 3)
-                printf("Missed: %d\n", missed);
-        }
+        printf("%s", line);
+        tostr(outs);
+        printf("\n");
     }
 
     fclose(fp);
-    if (line)
-        free(line);
     return 0;
 }
